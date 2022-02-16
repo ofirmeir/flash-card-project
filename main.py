@@ -1,6 +1,7 @@
-from tkinter import Tk, Button, Canvas, Label, PhotoImage
+from tkinter import Tk, Button, Canvas, Label, PhotoImage, messagebox
 import pandas
 from random import choice
+from os.path import isfile
 
 # CONSTANTS
 BACKGROUND_COLOR = "#B1DDC6"
@@ -12,7 +13,21 @@ timer = None
 # ------------------------ Get new word ------------------------------ #
 
 
+def remove_card():
+    '''
+    Removes card from the list and saves it for the future.
+    '''
+    to_learn.remove(random_card)
+    new_data = pandas.DataFrame(to_learn)
+    new_data.to_csv(words_to_learn_file, index=0)
+    fetch_card()
+
+
 def flip_card(translation=''):
+    '''
+    Flips the card and showing the translation
+    :param translation: the word's english translation
+    '''
     window.after_cancel(timer)
     canvas_card.itemconfig(card_image, image=green_card_photo)
     canvas_card.itemconfig(text_language, text='English', fill="white")
@@ -20,7 +35,10 @@ def flip_card(translation=''):
 
 
 def fetch_card():
-    global timer
+    '''
+    Fetch a card, show it and activate the flip timer
+    '''
+    global timer, random_card
     window.after_cancel(timer)
     random_card = choice(to_learn)
     random_word = random_card["French"]
@@ -55,13 +73,25 @@ yes_image = PhotoImage(file="images/right.png")
 
 btn_no = Button(image=no_image, highlightthickness=0, command=fetch_card)
 btn_no.grid(row=1, column=0)
-btn_yes = Button(image=yes_image, highlightthickness=0, command=fetch_card)
+btn_yes = Button(image=yes_image, highlightthickness=0, command=remove_card)
 btn_yes.grid(row=1, column=1)
 
 # get words from the list
 words_df = pandas.read_csv("data/french_words.csv")
 to_learn = words_df.to_dict(orient="records")
+words_to_learn_file = "data/words_to_learn.csv"
+if not isfile(words_to_learn_file):
+    words_df = pandas.read_csv("data/french_words.csv")
+    words_df.to_csv(words_to_learn_file, index=0)
+    to_learn = words_df.to_dict(orient="records")
+else:
+    try:
+        words_df = pandas.read_csv(words_to_learn_file)
+        to_learn = words_df.to_dict(orient="records")
+    except pandas.errors.EmptyDataError:
+        messagebox.showinfo(title="Congrats", message="You have successfully learned all the words")
 
+random_card = None
 timer = window.after(3000, flip_card)
 fetch_card()
 
